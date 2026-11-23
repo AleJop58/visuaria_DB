@@ -1,0 +1,395 @@
+
+const visuaraDB = db.getSiblingDB("Visuara");
+
+if (visuaraDB.getCollectionNames().some(nombre => ["Objetos", "Escaneos"].includes(nombre))) {
+    throw new Error("Las colecciones Objetos o Escaneos ya existen. Ejecuta este archivo sobre una base de datos sin esas colecciones.");
+}
+
+const esquemaObjetos = {
+    bsonType: "object",
+    title: "Objetos",
+    additionalProperties: false,
+    required: ["id_objeto", "id_usuario", "id_categoria", "nombre_objeto", "imagenes_referencia"],
+    properties: {
+        _id: { bsonType: "objectId" },
+        id_objeto: { bsonType: "objectId" },
+        id_usuario: { bsonType: "objectId" },
+        id_categoria: { bsonType: "objectId" },
+        nombre_objeto: { bsonType: "string", minLength: 1, maxLength: 100 },
+        descripcion_fisica: { bsonType: "string", maxLength: 500 },
+        ubicacion_habitual: { bsonType: "string", maxLength: 150 },
+        imagenes_referencia: {
+            bsonType: "array",
+            items: {
+                bsonType: "object",
+                additionalProperties: false,
+                required: ["id_imagen_ref", "ruta_archivo", "fecha_captura"],
+                properties: {
+                    id_imagen_ref: { bsonType: "objectId" },
+                    ruta_archivo: { bsonType: "string", minLength: 1, maxLength: 1000 },
+                    fecha_captura: { bsonType: "date" }
+                }
+            }
+        }
+    }
+};
+
+const esquemaEscaneos = {
+    bsonType: "object",
+    title: "Escaneos",
+    additionalProperties: false,
+    required: ["id_escaneo", "id_usuario", "id_dispositivo", "id_ambiente", "fecha_hora", "detecciones"],
+    properties: {
+        _id: { bsonType: "objectId" },
+        id_escaneo: { bsonType: "objectId" },
+        id_usuario: { bsonType: "objectId" },
+        id_dispositivo: { bsonType: "objectId" },
+        id_ambiente: { bsonType: "objectId" },
+        fecha_hora: { bsonType: "date" },
+        nivel_iluminacion: { bsonType: "string", enum: ["Alta", "Media", "Baja"] },
+        detecciones: {
+            bsonType: "array",
+            items: {
+                bsonType: "object",
+                additionalProperties: false,
+                required: ["id_deteccion", "id_objeto", "porcentaje_certeza", "mensaje_audio"],
+                properties: {
+                    id_deteccion: { bsonType: "objectId" },
+                    id_objeto: { bsonType: ["objectId", "null"] },
+                    porcentaje_certeza: { bsonType: "number", minimum: 0, maximum: 100 },
+                    mensaje_audio: { bsonType: "string", maxLength: 1000 }
+                }
+            }
+        }
+    }
+};
+
+visuaraDB.createCollection("Objetos", {
+    capped: false,
+    validator: { $jsonSchema: esquemaObjetos },
+    validationLevel: "strict",
+    validationAction: "error"
+});
+
+visuaraDB.createCollection("Escaneos", {
+    capped: false,
+    validator: { $jsonSchema: esquemaEscaneos },
+    validationLevel: "strict",
+    validationAction: "error"
+});
+
+visuaraDB.Objetos.createIndex({ id_objeto: 1 }, { unique: true });
+visuaraDB.Objetos.createIndex({ id_usuario: 1, nombre_objeto: 1 });
+visuaraDB.Escaneos.createIndex({ id_escaneo: 1 }, { unique: true });
+visuaraDB.Escaneos.createIndex({ id_usuario: 1, fecha_hora: -1 });
+visuaraDB.Escaneos.createIndex({ "detecciones.id_objeto": 1, fecha_hora: -1 });
+
+const referencias = {
+    usuario1: ObjectId("000000000000000000000101"),
+    usuario2: ObjectId("000000000000000000000102"),
+    usuario3: ObjectId("000000000000000000000103"),
+    categoria1: ObjectId("000000000000000000000201"),
+    categoria2: ObjectId("000000000000000000000202"),
+    categoria3: ObjectId("000000000000000000000203"),
+    categoria4: ObjectId("000000000000000000000204"),
+    dispositivo1: ObjectId("000000000000000000000301"),
+    dispositivo2: ObjectId("000000000000000000000302"),
+    dispositivo3: ObjectId("000000000000000000000303"),
+    ambiente1: ObjectId("000000000000000000000401"),
+    ambiente2: ObjectId("000000000000000000000402"),
+    ambiente3: ObjectId("000000000000000000000403"),
+    ambiente4: ObjectId("000000000000000000000404"),
+    objeto1: ObjectId("000000000000000000000501"),
+    objeto2: ObjectId("000000000000000000000502"),
+    objeto3: ObjectId("000000000000000000000503"),
+    objeto4: ObjectId("000000000000000000000504"),
+    objeto5: ObjectId("000000000000000000000505"),
+    objeto6: ObjectId("000000000000000000000506")
+};
+
+visuaraDB.Objetos.insertMany([
+    {
+        id_objeto: referencias.objeto1,
+        id_usuario: referencias.usuario1,
+        id_categoria: referencias.categoria1,
+        nombre_objeto: "Llaves principales",
+        descripcion_fisica: "Llavero metálico con cinta azul",
+        ubicacion_habitual: "Mueble de entrada",
+        imagenes_referencia: [
+            {
+                id_imagen_ref: ObjectId("000000000000000000000801"),
+                ruta_archivo: "/imagenes/llaves_frente.jpg",
+                fecha_captura: new Date("2026-10-01T09:00:00Z")
+            },
+            {
+                id_imagen_ref: ObjectId("000000000000000000000802"),
+                ruta_archivo: "/imagenes/llaves_lateral.jpg",
+                fecha_captura: new Date("2026-10-01T09:05:00Z")
+            }
+        ]
+    },
+    {
+        id_objeto: referencias.objeto2,
+        id_usuario: referencias.usuario1,
+        id_categoria: referencias.categoria2,
+        nombre_objeto: "Billetera negra",
+        descripcion_fisica: "Billetera rectangular de cuero",
+        ubicacion_habitual: "Mesa del dormitorio",
+        imagenes_referencia: [
+            {
+                id_imagen_ref: ObjectId("000000000000000000000803"),
+                ruta_archivo: "/imagenes/billetera.jpg",
+                fecha_captura: new Date("2026-10-01T10:00:00Z")
+            }
+        ]
+    },
+    {
+        id_objeto: referencias.objeto3,
+        id_usuario: referencias.usuario2,
+        id_categoria: referencias.categoria3,
+        nombre_objeto: "Pastillero rojo",
+        descripcion_fisica: "Caja roja con siete compartimentos",
+        ubicacion_habitual: "Mesa de la cocina",
+        imagenes_referencia: [
+            {
+                id_imagen_ref: ObjectId("000000000000000000000804"),
+                ruta_archivo: "/imagenes/pastillero_frente.jpg",
+                fecha_captura: new Date("2026-10-02T08:00:00Z")
+            },
+            {
+                id_imagen_ref: ObjectId("000000000000000000000805"),
+                ruta_archivo: "/imagenes/pastillero_superior.jpg",
+                fecha_captura: new Date("2026-10-02T08:05:00Z")
+            }
+        ]
+    },
+    {
+        id_objeto: referencias.objeto4,
+        id_usuario: referencias.usuario2,
+        id_categoria: referencias.categoria4,
+        nombre_objeto: "Audífonos inalámbricos",
+        descripcion_fisica: "Audífonos negros con estuche",
+        ubicacion_habitual: "Estante de la sala",
+        imagenes_referencia: [
+            {
+                id_imagen_ref: ObjectId("000000000000000000000806"),
+                ruta_archivo: "/imagenes/audifonos.jpg",
+                fecha_captura: new Date("2026-10-02T11:00:00Z")
+            }
+        ]
+    },
+    {
+        id_objeto: referencias.objeto5,
+        id_usuario: referencias.usuario3,
+        id_categoria: referencias.categoria2,
+        nombre_objeto: "Documento de identidad",
+        descripcion_fisica: "Tarjeta plástica rectangular",
+        ubicacion_habitual: "Cajón del dormitorio",
+        imagenes_referencia: [
+            {
+                id_imagen_ref: ObjectId("000000000000000000000807"),
+                ruta_archivo: "/imagenes/documento.jpg",
+                fecha_captura: new Date("2026-10-03T10:00:00Z")
+            }
+        ]
+    },
+    {
+        id_objeto: referencias.objeto6,
+        id_usuario: referencias.usuario1,
+        id_categoria: referencias.categoria4,
+        nombre_objeto: "Control remoto",
+        descripcion_fisica: "Control negro con botones grises",
+        ubicacion_habitual: "Mesa de centro de la sala",
+        imagenes_referencia: [
+            {
+                id_imagen_ref: ObjectId("000000000000000000000808"),
+                ruta_archivo: "/imagenes/control_frente.jpg",
+                fecha_captura: new Date("2026-10-03T11:00:00Z")
+            },
+            {
+                id_imagen_ref: ObjectId("000000000000000000000809"),
+                ruta_archivo: "/imagenes/control_reverso.jpg",
+                fecha_captura: new Date("2026-10-03T11:10:00Z")
+            }
+        ]
+    }
+]);
+
+visuaraDB.Escaneos.insertMany([
+    {
+        id_escaneo: ObjectId("000000000000000000000601"),
+        id_usuario: referencias.usuario1,
+        id_dispositivo: referencias.dispositivo1,
+        id_ambiente: referencias.ambiente1,
+        fecha_hora: new Date("2026-10-05T09:30:00Z"),
+        nivel_iluminacion: "Alta",
+        detecciones: [
+            {
+                id_deteccion: ObjectId("000000000000000000000701"),
+                id_objeto: referencias.objeto1,
+                porcentaje_certeza: 98.4,
+                mensaje_audio: "Llaves detectadas en la sala"
+            },
+            {
+                id_deteccion: ObjectId("000000000000000000000702"),
+                id_objeto: referencias.objeto2,
+                porcentaje_certeza: 91.2,
+                mensaje_audio: "Billetera detectada en la sala"
+            },
+            {
+                id_deteccion: ObjectId("000000000000000000000703"),
+                id_objeto: referencias.objeto6,
+                porcentaje_certeza: 93.7,
+                mensaje_audio: "Control remoto detectado en la sala"
+            }
+        ]
+    },
+    {
+        id_escaneo: ObjectId("000000000000000000000602"),
+        id_usuario: referencias.usuario1,
+        id_dispositivo: referencias.dispositivo1,
+        id_ambiente: referencias.ambiente2,
+        fecha_hora: new Date("2026-10-05T11:00:00Z"),
+        nivel_iluminacion: "Media",
+        detecciones: [
+            {
+                id_deteccion: ObjectId("000000000000000000000704"),
+                id_objeto: referencias.objeto1,
+                porcentaje_certeza: 95.8,
+                mensaje_audio: "Llaves detectadas en el dormitorio"
+            }
+        ]
+    },
+    {
+        id_escaneo: ObjectId("000000000000000000000603"),
+        id_usuario: referencias.usuario2,
+        id_dispositivo: referencias.dispositivo2,
+        id_ambiente: referencias.ambiente3,
+        fecha_hora: new Date("2026-10-06T08:15:00Z"),
+        nivel_iluminacion: "Alta",
+        detecciones: [
+            {
+                id_deteccion: ObjectId("000000000000000000000705"),
+                id_objeto: referencias.objeto3,
+                porcentaje_certeza: 96.9,
+                mensaje_audio: "Pastillero detectado en la cocina"
+            },
+            {
+                id_deteccion: ObjectId("000000000000000000000706"),
+                id_objeto: referencias.objeto4,
+                porcentaje_certeza: 87.5,
+                mensaje_audio: "Audífonos detectados en la cocina"
+            }
+        ]
+    },
+    {
+        id_escaneo: ObjectId("000000000000000000000604"),
+        id_usuario: referencias.usuario2,
+        id_dispositivo: referencias.dispositivo2,
+        id_ambiente: referencias.ambiente3,
+        fecha_hora: new Date("2026-10-06T12:30:00Z"),
+        nivel_iluminacion: "Baja",
+        detecciones: [
+            {
+                id_deteccion: ObjectId("000000000000000000000707"),
+                id_objeto: referencias.objeto3,
+                porcentaje_certeza: 82.3,
+                mensaje_audio: "Posible pastillero detectado"
+            },
+            {
+                id_deteccion: ObjectId("000000000000000000000708"),
+                id_objeto: null,
+                porcentaje_certeza: 21.0,
+                mensaje_audio: "No fue posible identificar el objeto"
+            }
+        ]
+    },
+    {
+        id_escaneo: ObjectId("000000000000000000000605"),
+        id_usuario: referencias.usuario3,
+        id_dispositivo: referencias.dispositivo3,
+        id_ambiente: referencias.ambiente4,
+        fecha_hora: new Date("2026-10-07T10:20:00Z"),
+        nivel_iluminacion: "Media",
+        detecciones: [
+            {
+                id_deteccion: ObjectId("000000000000000000000709"),
+                id_objeto: referencias.objeto5,
+                porcentaje_certeza: 99.1,
+                mensaje_audio: "Documento detectado en el dormitorio"
+            }
+        ]
+    },
+    {
+        id_escaneo: ObjectId("000000000000000000000606"),
+        id_usuario: referencias.usuario1,
+        id_dispositivo: referencias.dispositivo1,
+        id_ambiente: referencias.ambiente1,
+        fecha_hora: new Date("2026-10-08T16:40:00Z"),
+        nivel_iluminacion: "Alta",
+        detecciones: [
+            {
+                id_deteccion: ObjectId("000000000000000000000710"),
+                id_objeto: referencias.objeto6,
+                porcentaje_certeza: 97.5,
+                mensaje_audio: "Control remoto detectado en la sala"
+            },
+            {
+                id_deteccion: ObjectId("000000000000000000000711"),
+                id_objeto: referencias.objeto2,
+                porcentaje_certeza: 94.3,
+                mensaje_audio: "Billetera detectada en la sala"
+            }
+        ]
+    }
+]);
+
+printjson({
+    base_datos: visuaraDB.getName(),
+    colecciones: visuaraDB.getCollectionNames().filter(
+        nombre => ["Objetos", "Escaneos"].includes(nombre)
+    ),
+    total_objetos: visuaraDB.Objetos.countDocuments({}),
+    total_escaneos: visuaraDB.Escaneos.countDocuments({}),
+    total_imagenes: visuaraDB.Objetos.aggregate([
+        { $unwind: "$imagenes_referencia" },
+        { $count: "total" }
+    ]).toArray()[0]?.total ?? 0,
+    total_detecciones: visuaraDB.Escaneos.aggregate([
+        { $unwind: "$detecciones" },
+        { $count: "total" }
+    ]).toArray()[0]?.total ?? 0
+});
+
+printjson(visuaraDB.Objetos.aggregate([
+    {
+        $group: {
+            _id: "$id_usuario",
+            cantidad_objetos: { $sum: 1 }
+        }
+    },
+    {
+        $sort: { cantidad_objetos: -1 }
+    }
+]).toArray());
+
+printjson(visuaraDB.Escaneos.aggregate([
+    { $unwind: "$detecciones" },
+    {
+        $match: {
+            "detecciones.id_objeto": referencias.objeto1
+        }
+    },
+    { $sort: { fecha_hora: -1 } },
+    { $limit: 1 },
+    {
+        $project: {
+            _id: 0,
+            id_objeto: "$detecciones.id_objeto",
+            id_ambiente: 1,
+            fecha_hora: 1,
+            porcentaje_certeza: "$detecciones.porcentaje_certeza",
+            mensaje_audio: "$detecciones.mensaje_audio"
+        }
+    }
+]).toArray());
