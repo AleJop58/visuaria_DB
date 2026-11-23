@@ -331,12 +331,3 @@ JOIN dbo.Usuario u ON u.id_usuario = e.id_usuario
 JOIN dbo.Ambiente a ON a.id_ambiente = e.id_ambiente
 ORDER BY e.fecha_hora, u.id_usuario, o.nombre_objeto;
 GO
-
-select * from Usuario
-select * from Ambiente
-select * from Configuracion
-select * from Objeto
-select * from UsuarioObjeto
-select * from HistorialUbicacion
-select * from Deteccion
-select * from Escaneo
